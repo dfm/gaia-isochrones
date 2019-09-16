@@ -84,7 +84,7 @@ def get_gaia_data(coord, approx_mag=None, radius=None, mag_tol=1.0, **kwargs):
     return params
 
 
-def fit_gaia_data(name, gaia_data, clobber=False, output_dir="."):
+def fit_gaia_data(name, gaia_data, clobber=False, output_dir=None):
     # We will fit for jitter parameters for each magnitude
     jitter_vars = ["G", "BP", "RP"]
 
@@ -93,21 +93,22 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir="."):
     mod = isochrones.SingleStarModel(mist, **gaia_data)
 
     # Return the existing samples if not clobbering
-    output_dir = os.path.join(output_dir, __version__, name)
-    os.makedirs(output_dir, exist_ok=True)
-    fn = os.path.join(output_dir, "star.h5")
-    if (not clobber) and os.path.exists(fn):
-        mod._samples = pd.read_hdf(fn, "samples")
-        mod._derived_samples = pd.read_hdf(fn, "derived_samples")
-        return mod
+    if output_dir is not None:
+        output_dir = os.path.join(output_dir, __version__, name)
+        os.makedirs(output_dir, exist_ok=True)
+        fn = os.path.join(output_dir, "star.h5")
+        if (not clobber) and os.path.exists(fn):
+            mod._samples = pd.read_hdf(fn, "samples")
+            mod._derived_samples = pd.read_hdf(fn, "derived_samples")
+            return mod, None
 
-    with open(os.path.join(output_dir, "gaia.json"), "w") as f:
-        json.dump(
-            dict((k, v.tolist()) for k, v in gaia_data.items()),
-            f,
-            indent=2,
-            sort_keys=True,
-        )
+        with open(os.path.join(output_dir, "gaia.json"), "w") as f:
+            json.dump(
+                dict((k, v.tolist()) for k, v in gaia_data.items()),
+                f,
+                indent=2,
+                sort_keys=True,
+            )
 
     # These functions wrap isochrones so that they can be used with dynesty:
     def prior_transform(u):
@@ -135,7 +136,6 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir="."):
     strt = time.time()
     sampler.run_nested()
     total_time = (time.time() - strt) / 60.0
-    print("Sampling took {0} minutes".format(total_time))
 
     # Resample the chain to get unit weight samples and update the isochrones
     # model
@@ -157,28 +157,29 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir="."):
     mod._derived_samples["distance"] = df["distance"]
     mod._derived_samples["AV"] = df["AV"]
 
-    # Save these results to disk
-    mod._samples.to_hdf(fn, "samples")
-    mod._derived_samples.to_hdf(fn, "derived_samples")
+    if output_dir is not None:
+        # Save these results to disk
+        mod._samples.to_hdf(fn, "samples")
+        mod._derived_samples.to_hdf(fn, "derived_samples")
 
-    # Save the summary to disk
-    mod._derived_samples.describe().transpose().to_csv(
-        os.path.join(output_dir, "star_summary.csv")
-    )
+        # Save the summary to disk
+        mod._derived_samples.describe().transpose().to_csv(
+            os.path.join(output_dir, "star_summary.csv")
+        )
 
-    # Summarize the sampling performance
-    summary = dict(
-        nlive=int(results.nlive),
-        niter=int(results.niter),
-        ncall=int(sum(results.ncall)),
-        eff=float(results.eff),
-        logz=float(results.logz[-1]),
-        logzerr=float(results.logzerr[-1]),
-        total_time=float(total_time),
-    )
-    with open(
-        os.path.join(output_dir, "star_sampling_summary.json"), "w"
-    ) as f:
-        json.dump(summary, f, indent=True, sort_keys=True)
+        # Summarize the sampling performance
+        summary = dict(
+            nlive=int(results.nlive),
+            niter=int(results.niter),
+            ncall=int(sum(results.ncall)),
+            eff=float(results.eff),
+            logz=float(results.logz[-1]),
+            logzerr=float(results.logzerr[-1]),
+            total_time=float(total_time),
+        )
+        with open(
+            os.path.join(output_dir, "star_sampling_summary.json"), "w"
+        ) as f:
+            json.dump(summary, f, indent=True, sort_keys=True)
 
     return mod, sampler

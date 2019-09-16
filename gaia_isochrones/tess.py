@@ -21,7 +21,7 @@ from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file
 
 from .stellar import fit_gaia_data, get_gaia_data
-from .tess_atlas_version import __version__
+from .gaia_isochrones_version import __version__
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php"
 
@@ -43,7 +43,7 @@ def get_info_for_toi(toi_num, use_cache=True):
 
     # Extract the planet periods
     periods = np.array(tois["Period (days)"], dtype=float)
-    assert np.all(periods > 0), "We haven't implemented single transits yet"
+    tois["periods"] = periods
 
     # Convert the phase to TBJD from BJD
     tois["t0s"] = np.array(tois["Epoch (BJD)"], dtype=float) - 2457000
