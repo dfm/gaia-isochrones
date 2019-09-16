@@ -17,14 +17,15 @@ import astropy.units as u
 from .gaia_isochrones_version import __version__
 
 
-def get_gaia_data(coord, approx_mag=None, radius=None, **kwargs):
+def get_gaia_data(coord, approx_mag=None, radius=None, mag_tol=1.0, **kwargs):
     """Cross match to Gaia and construct a dataset for isochrone fitting
 
     Args:
         coord (SkyCoord): The coordinates of the source
         approx_mag (float, optional): The magnitude of the source in an
             optical band. If provided, only sources with a Gaia G mag within
-            1 mag will be returned.
+            ``mag_tol`` mag will be returned.
+        mag_tol (float, optional): The magnitude tolerance.
         radius (Quantity, optional): The angular search radius.
 
     Raises:
@@ -43,7 +44,7 @@ def get_gaia_data(coord, approx_mag=None, radius=None, **kwargs):
 
     # Only select targets within 1 mag of the target
     if approx_mag is not None:
-        r = r[np.abs(r["phot_g_mean_mag"] - approx_mag) < 1]
+        r = r[np.abs(r["phot_g_mean_mag"] - approx_mag) < mag_tol]
 
     if not len(r):
         raise ValueError("no matches found")
