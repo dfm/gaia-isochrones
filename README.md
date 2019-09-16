@@ -1,2 +1,2 @@
 # gaia-isochrones
-isochrones.py + Gaia = ❤️
+[isochrones.py](https://github.com/timothydmorton/isochrones) + [Gaia](https://sci.esa.int/web/gaia) = ❤️
