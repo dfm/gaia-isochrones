@@ -3,6 +3,7 @@
 
 import os
 import sys
+import warnings
 import contextlib
 
 import requests
@@ -18,6 +19,9 @@ from gaia_isochrones.stellar import (  # NOQA
     get_gaia_data,
     fit_gaia_data,
 )
+
+# Squash astropy warnings
+warnings.filterwarnings("ignore", module="astropy.io.votable.tree")
 
 gaia_kepler_url = (
     "https://www.dropbox.com/s/xo1n12fxzgzybny/kepler_dr2_1arcsec.fits?dl=1"
@@ -97,19 +101,27 @@ def run_fit(args):
     output_dir = os.path.join("results", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    if "ra" in gaia_data:
-        coord = SkyCoord(gaia_data["ra"], gaia_data["dec"], unit=u.deg)
-        try:
-            gaia_data = get_gaia_data(
-                coord, approx_mag=gaia_data["mag"], radius=1 * u.arcmin
-            )
-        except ValueError:
-            return
+    if os.path.exists(os.path.join(output_dir, "star.h5")):
+        return
 
     with open(os.path.join(output_dir, "stdout.log"), "w") as stdout:
         with open(os.path.join(output_dir, "stderr.log"), "w") as stderr:
             with contextlib.redirect_stdout(stdout):
                 with contextlib.redirect_stderr(stderr):
+
+                    if "ra" in gaia_data:
+                        coord = SkyCoord(
+                            gaia_data["ra"], gaia_data["dec"], unit=u.deg
+                        )
+                        try:
+                            gaia_data = get_gaia_data(
+                                coord,
+                                approx_mag=gaia_data["mag"],
+                                radius=1 * u.arcmin,
+                            )
+                        except ValueError:
+                            return
+
                     results = fit_gaia_data(gaia_data, output_dir=output_dir)
                     del results
 
