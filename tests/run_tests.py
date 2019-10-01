@@ -110,7 +110,8 @@ def run_fit(args):
         with open(os.path.join(output_dir, "stderr.log"), "w") as stderr:
             with contextlib.redirect_stdout(stdout):
                 with contextlib.redirect_stderr(stderr):
-                    fit_gaia_data(gaia_data, output_dir=output_dir)
+                    results = fit_gaia_data(gaia_data, output_dir=output_dir)
+                    del results
 
 
 if __name__ == "__main__":

@@ -17,6 +17,16 @@ import astropy.units as u
 from .gaia_isochrones_version import __version__
 
 
+_MIST = None
+
+
+def _get_mist():
+    global _MIST
+    if _MIST is None:
+        _MIST = isochrones.get_ichrone("mist", bands=["G", "BP", "RP"])
+    return _MIST
+
+
 def get_gaia_data_for_id(gaia_id, **kwargs):
     j = Gaia.launch_job(
         "select * from gaiadr2.gaia_source where source_id={0}".format(gaia_id)
@@ -103,7 +113,7 @@ def fit_gaia_data(gaia_data, clobber=False, output_dir=None):
     jitter_vars = ["G", "BP", "RP"]
 
     # Set up an isochrones model using the MIST tracks
-    mist = isochrones.get_ichrone("mist", bands=["G", "BP", "RP"])
+    mist = _get_mist()
     mod = isochrones.SingleStarModel(mist, **gaia_data)
 
     # Return the existing samples if not clobbering
