@@ -136,8 +136,6 @@ if __name__ == "__main__":
         threads = int(threads)
     print("Running in {0} threads".format(threads))
 
-    assert 0
-
     with tqdm.tqdm(total=len(datasets)) as bar:
         with Pool(threads) as pool:
             for _ in pool.imap_unordered(run_fit, datasets):
