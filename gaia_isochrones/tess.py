@@ -78,13 +78,17 @@ def get_gaia_data_for_tic(tic, **kwargs):
     return get_gaia_data(coord, approx_mag=float(info["GAIAmag"]), **kwargs)
 
 
-def fit_gaia_data_for_toi(toi_num, clobber=False, **kwargs):
+def fit_gaia_data_for_toi(toi_num, clobber=False, output_dir=None, **kwargs):
     name = os.path.join("toi", "{0}".format(toi_num))
     data = get_gaia_data_for_toi(toi_num, **kwargs)
-    return fit_gaia_data(name, data, clobber=clobber)
+    return fit_gaia_data(
+        data, clobber=clobber, output_dir=os.path.join(output_dir, name)
+    )
 
 
-def fit_gaia_data_for_tic(tic, clobber=False, **kwargs):
+def fit_gaia_data_for_tic(tic, clobber=False, output_dir=None, **kwargs):
     name = os.path.join("tic", "{0}".format(tic))
     data = get_gaia_data_for_tic(tic, **kwargs)
-    return fit_gaia_data(name, data, clobber=clobber)
+    return fit_gaia_data(
+        data, clobber=clobber, output_dir=os.path.join(output_dir, name)
+    )

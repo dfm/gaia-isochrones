@@ -1,4 +1,4 @@
 astropy
 astroquery
-dynesty
+dynesty>=1.0.0
 isochrones

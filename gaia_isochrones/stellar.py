@@ -17,6 +17,16 @@ import astropy.units as u
 from .gaia_isochrones_version import __version__
 
 
+def get_gaia_data_for_id(gaia_id, **kwargs):
+    j = Gaia.launch_job(
+        "select * from gaiadr2.gaia_source where source_id={0}".format(gaia_id)
+    )
+    r = j.get_results()
+    if not len(r):
+        raise ValueError("no matches found")
+    return _parse_gaia_data(r[0], **kwargs)
+
+
 def get_gaia_data(coord, approx_mag=None, radius=None, mag_tol=1.0, **kwargs):
     """Cross match to Gaia and construct a dataset for isochrone fitting
 
@@ -52,6 +62,10 @@ def get_gaia_data(coord, approx_mag=None, radius=None, mag_tol=1.0, **kwargs):
     # Select the closest target
     r = r[0]
 
+    return _parse_gaia_data(r, **kwargs)
+
+
+def _parse_gaia_data(r, **kwargs):
     # Parallax offset reference: https://arxiv.org/abs/1805.03526
     plx = r["parallax"] + 0.082
     plx_err = np.sqrt(r["parallax_error"] ** 2 + 0.033 ** 2)
@@ -84,7 +98,7 @@ def get_gaia_data(coord, approx_mag=None, radius=None, mag_tol=1.0, **kwargs):
     return params
 
 
-def fit_gaia_data(name, gaia_data, clobber=False, output_dir=None):
+def fit_gaia_data(gaia_data, clobber=False, output_dir=None):
     # We will fit for jitter parameters for each magnitude
     jitter_vars = ["G", "BP", "RP"]
 
@@ -94,7 +108,7 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir=None):
 
     # Return the existing samples if not clobbering
     if output_dir is not None:
-        output_dir = os.path.join(output_dir, __version__, name)
+        output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         fn = os.path.join(output_dir, "star.h5")
         if (not clobber) and os.path.exists(fn):
@@ -103,12 +117,9 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir=None):
             return mod, None
 
         with open(os.path.join(output_dir, "gaia.json"), "w") as f:
-            json.dump(
-                dict((k, v.tolist()) for k, v in gaia_data.items()),
-                f,
-                indent=2,
-                sort_keys=True,
-            )
+            obj = dict((k, v.tolist()) for k, v in gaia_data.items())
+            obj["version"] = __version__
+            json.dump(obj, f, indent=2, sort_keys=True)
 
     # These functions wrap isochrones so that they can be used with dynesty:
     def prior_transform(u):
@@ -169,6 +180,7 @@ def fit_gaia_data(name, gaia_data, clobber=False, output_dir=None):
 
         # Summarize the sampling performance
         summary = dict(
+            version=__version__,
             nlive=int(results.nlive),
             niter=int(results.niter),
             ncall=int(sum(results.ncall)),
