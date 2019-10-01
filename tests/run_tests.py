@@ -85,15 +85,9 @@ def get_mann_data():
     for name, ra, dec, mag in zip(
         table["Name"], table["RAdeg"], table["DEdeg"], table["Gaiamag"]
     ):
-        coord = SkyCoord(ra, dec, unit=u.deg)
-        try:
-            gaia_data = get_gaia_data(
-                coord, approx_mag=mag, radius=1 * u.arcmin
-            )
-        except ValueError:
-            pass
-        else:
-            datasets.append(("mann/{0}".format(name), gaia_data))
+        datasets.append(
+            ("mann/{0}".format(name), {"ra": ra, "dec": dec, "mag": mag})
+        )
 
     return datasets
 
@@ -102,6 +96,16 @@ def run_fit(args):
     output_dir, gaia_data = args
     output_dir = os.path.join("results", output_dir)
     os.makedirs(output_dir, exist_ok=True)
+
+    if "ra" in gaia_data:
+        coord = SkyCoord(gaia_data["ra"], gaia_data["dec"], unit=u.deg)
+        try:
+            gaia_data = get_gaia_data(
+                coord, approx_mag=gaia_data["mag"], radius=1 * u.arcmin
+            )
+        except ValueError:
+            return
+
     with open(os.path.join(output_dir, "stdout.log"), "w") as stdout:
         with open(os.path.join(output_dir, "stderr.log"), "w") as stderr:
             with contextlib.redirect_stdout(stdout):
@@ -133,7 +137,7 @@ if __name__ == "__main__":
 
     threads = cpu_count()
     if args.threads is not None:
-        threads = int(threads)
+        threads = int(args.threads)
     print("Running in {0} threads".format(threads))
 
     with tqdm.tqdm(total=len(datasets)) as bar:
